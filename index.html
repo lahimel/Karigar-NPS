@@ -244,14 +244,15 @@ textarea::placeholder { color: #b5aaa0; }
         <div class="q-num">Question 2 of 3</div>
         <div class="progress-bar"><div class="progress-fill" style="width: 66%"></div></div>
       </div>
-      <div class="q-text">Which skill area did you explore?</div>
+      <div class="q-text">Which lab did you explore?</div>
       <div class="chip-grid">
-        <div class="chip" onclick="pickSkill(this)">⚡ Electrical</div>
-        <div class="chip" onclick="pickSkill(this)">🪵 Carpentry</div>
-        <div class="chip" onclick="pickSkill(this)">💻 IT / Computers</div>
-        <div class="chip" onclick="pickSkill(this)">🍞 Baking</div>
-        <div class="chip" onclick="pickSkill(this)">🔩 Welding</div>
-        <div class="chip" onclick="pickSkill(this)">✨ Multiple</div>
+        <div class="chip" data-lab="Agriculture Lab" onclick="pickSkill(this)">🌾 Agriculture Lab</div>
+        <div class="chip chip-all" data-lab="All Labs" onclick="pickSkill(this)">🏫 All Labs</div>
+        <div class="chip" data-lab="Electrical Lab" onclick="pickSkill(this)">⚡ Electrical Lab</div>
+        <div class="chip" data-lab="Engineering Lab" onclick="pickSkill(this)">⚙️ Engineering Lab</div>
+        <div class="chip" data-lab="Food Processing Lab" onclick="pickSkill(this)">🍞 Food Processing Lab</div>
+        <div class="chip" data-lab="Healthcare Lab" onclick="pickSkill(this)">🏥 Healthcare Lab</div>
+        <div class="chip" data-lab="Mechatronics Lab" onclick="pickSkill(this)">🤖 Mechatronics Lab</div>
       </div>
     </div>
 
@@ -292,7 +293,7 @@ textarea::placeholder { color: #b5aaa0; }
 var NPS_URL = 'https://script.google.com/macros/s/AKfycbxVkRu8KWZ6LetW_tJ1qqp4AQH6h3BvNNDY73lE1PhxL8acTgLvOjiZf_lPQqQzDhfZ2w/exec';
 
 var npsScore = null;
-var selSkill = null;
+var selSkills = []; // now an array for multi-select
 
 function pickNps(val) {
   npsScore = val;
@@ -320,9 +321,26 @@ function pickNps(val) {
 }
 
 function pickSkill(el) {
-  document.querySelectorAll('.chip').forEach(function(c){ c.classList.remove('on'); });
-  el.classList.add('on');
-  selSkill = el.textContent.trim();
+  var lab = el.getAttribute('data-lab');
+  var isAll = lab === 'All Labs';
+
+  if (isAll) {
+    // "All Labs" selected — deselect everything else, toggle All Labs itself
+    var wasOn = el.classList.contains('on');
+    document.querySelectorAll('.chip').forEach(function(c){ c.classList.remove('on'); });
+    if (!wasOn) el.classList.add('on');
+  } else {
+    // Specific lab clicked — deselect "All Labs" first
+    document.querySelectorAll('.chip-all').forEach(function(c){ c.classList.remove('on'); });
+    // Toggle this chip
+    el.classList.toggle('on');
+  }
+
+  // Rebuild selSkills array from currently active chips
+  selSkills = [];
+  document.querySelectorAll('.chip.on').forEach(function(c){
+    selSkills.push(c.getAttribute('data-lab'));
+  });
 }
 
 async function submitNps() {
@@ -333,8 +351,8 @@ async function submitNps() {
     err.textContent = '⚠️ Please select a score from 0 to 10.';
     err.classList.add('show'); return;
   }
-  if (!selSkill) {
-    err.textContent = '⚠️ Please select the skill area you explored.';
+  if (!selSkills.length) {
+    err.textContent = '⚠️ Please select at least one lab you explored.';
     err.classList.add('show'); return;
   }
 
@@ -344,7 +362,7 @@ async function submitNps() {
 
   var payload = {
     score:    npsScore,
-    skill:    selSkill,
+    skill:    selSkills.join(', '),
     feedback: document.getElementById('feedback').value.trim(),
     submittedAt: new Date().toLocaleString('en-IN')
   };
@@ -372,7 +390,7 @@ async function submitNps() {
 function resetForm() {
   // Clear variables
   npsScore = null;
-  selSkill = null;
+  selSkills = [];
 
   // Reset visuals
   document.querySelectorAll('.nps-btn').forEach(b => b.classList.remove('sel-red','sel-amber','sel-green'));
